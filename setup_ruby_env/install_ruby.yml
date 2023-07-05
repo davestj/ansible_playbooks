@@ -1,0 +1,38 @@
+---
+- name: Install Ruby
+  hosts: localhost
+  gather_facts: false
+  become: yes
+
+  vars:
+    ruby_version: "{{ ruby_version | default('latest') }}"
+    rvm_rubies: []
+
+  tasks:
+    - name: Install RVM and setup environment
+      rvm_setup:
+        version: "{{ ruby_version }}"
+        state: present
+
+    - name: Install Ruby dependencies
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - build-essential
+        - libssl-dev
+        - libreadline-dev
+        - zlib1g-dev
+
+    - name: Install Ruby
+      rvm:
+        ruby: "{{ ruby_version }}"
+        state: present
+
+    - name: Add alternative beta Ruby version
+      when: rvm_rubies | length > 0
+      rvm:
+        ruby: "{{ item }}"
+        state: present
+      loop: "{{ rvm_rubies }}"
+
