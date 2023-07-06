@@ -1,0 +1,48 @@
+---
+- name: Build Ruby on Rails Podman container
+  hosts: localhost
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install required packages
+      dnf:
+        name:
+          - podman
+          - ruby
+          - ruby-devel
+          - sqlite
+          - sqlite-devel
+          - gcc
+          - gcc-c++
+          - make
+        state: present
+    - name: Build Ruby on Rails container
+      command: podman build -t ruby-on-rails:fedora38 .
+    - name: Create and start container
+      command: podman run -d -p 3000:3000 --name ruby-on-rails-app ruby-on-rails:fedora38
+
+    - name: Install Rails gem
+      command: gem install rails --version 6.1.4
+
+    - name: Create Rails application
+      command: rails new /app
+
+    - name: Set ownership and permissions for Rails application
+      file:
+        path: /app
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Change directory to Rails application
+      shell: cd /app
+
+    - name: Install Rails dependencies
+      command: bundle install
+
+    - name: Create database
+      command: bin/rails db:create
+
+    - name: Start Local Rails server
+      command: bin/rails server -b 0.0.0.0
